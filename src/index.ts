@@ -34,8 +34,10 @@ class MainController {
     this.config = loadConfig();
 
     // Initialize logger
+    // Use 'warn' level in production to reduce log volume
+    const logLevel = process.env.NODE_ENV === 'production' ? 'warn' : 'info';
     initLogger({
-      minLevel: 'info',
+      minLevel: logLevel,
       logToFile: true,
       logToConsole: true,
     });

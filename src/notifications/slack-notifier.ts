@@ -149,11 +149,14 @@ export class SlackNotifier {
       }
 
       // Log successful send at debug level to avoid log spam
-      this.logger.debug(
-        'SlackNotifier',
-        'NOTIFICATION_SENT',
-        { message: 'Slack notification sent successfully' }
-      );
+      // Only log in development mode
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.debug(
+          'SlackNotifier',
+          'NOTIFICATION_SENT',
+          { message: 'Slack notification sent successfully' }
+        );
+      }
 
     } catch (error) {
       // Catch all errors to ensure non-blocking operation
