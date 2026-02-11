@@ -13,7 +13,116 @@ import type { ICAOCode } from '../config';
 import type { Duration } from '../types/timestamp';
 
 /**
+ * Calculate probability that maximum temperature falls within range
+ * 
+ * Models T_max ~ N(μ = T_current, σ = f(time_remaining, icao))
+ * 
+ * For finite range [min, max]:
+ *   P(min ≤ T_max ≤ max) = Φ((max - μ) / σ) - Φ((min - μ) / σ)
+ * 
+ * For ceiling [min, ∞):
+ *   P(T_max ≥ min) = 1 - Φ((min - μ) / σ)
+ * 
+ * For floor (-∞, max]:
+ *   P(T_max ≤ max) = Φ((max - μ) / σ)
+ * 
+ * For single threshold (min = max):
+ *   P(T_max > threshold) = 1 - Φ((threshold - μ) / σ)
+ * 
+ * @param currentTemp - Current temperature observation
+ * @param minThreshold - Minimum temperature (can be -Infinity)
+ * @param maxThreshold - Maximum temperature (can be Infinity)
+ * @param icao - ICAO airport code
+ * @param timeRemaining - Duration until observation end
+ * @returns Probability (0.0 to 1.0) that max temp falls in range
+ * 
+ * @example
+ * ```typescript
+ * const current = PrecisionTemperature.fromCelsius(20.0);
+ * const min = PrecisionTemperature.fromCelsius(22.0);
+ * const max = PrecisionTemperature.fromCelsius(24.0);
+ * const duration = Duration.fromMilliseconds(12 * 60 * 60 * 1000);
+ * 
+ * const prob = calculateRangeProbability(current, min, max, 'KLGA', duration);
+ * // prob ≈ probability that max temp falls between 22-24°C
+ * ```
+ */
+export function calculateRangeProbability(
+  currentTemp: PrecisionTemperature,
+  minThreshold: PrecisionTemperature,
+  maxThreshold: PrecisionTemperature,
+  icao: ICAOCode,
+  timeRemaining: Duration
+): number {
+  // Extract numeric values
+  const mu = PrecisionTemperature.value(currentTemp);
+  const min = PrecisionTemperature.value(minThreshold);
+  const max = PrecisionTemperature.value(maxThreshold);
+  
+  // Validate range
+  if (min > max) {
+    throw new Error(`Invalid range: min (${min}) > max (${max})`);
+  }
+  
+  // Calculate time-adjusted sigma
+  const sigma = calculateSigma(icao, timeRemaining);
+  
+  // Handle edge cases
+  if (sigma === 0) {
+    // No time remaining - current temp is final temp
+    if (min === max) {
+      // Single threshold: check if current > threshold
+      return mu > min ? 1.0 : 0.0;
+    }
+    // Range: check if current is within range
+    return (mu >= min && mu <= max) ? 1.0 : 0.0;
+  }
+  
+  if (timeRemaining.isNegative()) {
+    // Market expired - no probability
+    return 0.0;
+  }
+  
+  // Handle single threshold (backward compatibility)
+  if (min === max) {
+    const zScore = (min - mu) / sigma;
+    const cdfValue = cdf(zScore, 0, 1);
+    return Math.max(0, Math.min(1, 1 - cdfValue));
+  }
+  
+  // Handle ceiling: [min, ∞)
+  if (!isFinite(max)) {
+    const zScore = (min - mu) / sigma;
+    const cdfValue = cdf(zScore, 0, 1);
+    return Math.max(0, Math.min(1, 1 - cdfValue));
+  }
+  
+  // Handle floor: (-∞, max]
+  if (!isFinite(min)) {
+    const zScore = (max - mu) / sigma;
+    const cdfValue = cdf(zScore, 0, 1);
+    return Math.max(0, Math.min(1, cdfValue));
+  }
+  
+  // Handle finite range: [min, max]
+  const zScoreMax = (max - mu) / sigma;
+  const zScoreMin = (min - mu) / sigma;
+  
+  const cdfMax = cdf(zScoreMax, 0, 1);
+  const cdfMin = cdf(zScoreMin, 0, 1);
+  
+  const probability = cdfMax - cdfMin;
+  
+  // Clamp to [0, 1] range
+  return Math.max(0, Math.min(1, probability));
+}
+
+/**
  * Calculate probability that maximum temperature exceeds threshold
+ * 
+ * Backward-compatible wrapper for existing calculateProbability function.
+ * Maintains existing API for single-threshold markets.
+ * Internally calls calculateRangeProbability with threshold as both min and max.
  * 
  * Models T_max ~ N(μ = T_current, σ = f(time_remaining, icao))
  * Calculates P(T_max > X) = 1 - Φ((X - μ) / σ)
@@ -46,33 +155,13 @@ export function calculateProbability(
   icao: ICAOCode,
   timeRemaining: Duration
 ): number {
-  // Extract numeric values
-  const mu = PrecisionTemperature.value(currentTemp);
-  const x = PrecisionTemperature.value(threshold);
-  
-  // Calculate time-adjusted sigma
-  const sigma = calculateSigma(icao, timeRemaining);
-  
-  // Handle edge cases
-  if (sigma === 0) {
-    // No time remaining - current temp is final temp
-    return mu > x ? 1.0 : 0.0;
-  }
-  
-  if (timeRemaining.isNegative()) {
-    // Market expired - no probability
-    return 0.0;
-  }
-  
-  // Calculate z-score: (X - μ) / σ
-  const zScore = (x - mu) / sigma;
-  
-  // Calculate P(T_max > X) = 1 - Φ(z)
-  const cdfValue = cdf(zScore, 0, 1); // Standard normal: mean=0, std=1
-  const probability = 1 - cdfValue;
-  
-  // Clamp to [0, 1] range (should already be in range, but ensure)
-  return Math.max(0, Math.min(1, probability));
+  return calculateRangeProbability(
+    currentTemp,
+    threshold,
+    threshold,
+    icao,
+    timeRemaining
+  );
 }
 
 /**

@@ -21,7 +21,9 @@ export type Market = {
   readonly yesTokenId: string;
   readonly noTokenId: string;
   readonly icaoCode: ICAOCode;
-  readonly threshold: PrecisionTemperature;
+  readonly threshold: PrecisionTemperature;      // Backward compatibility - single threshold
+  readonly minThreshold: PrecisionTemperature;   // Range lower bound (can be -Infinity)
+  readonly maxThreshold: PrecisionTemperature;   // Range upper bound (can be Infinity)
   readonly observationEnd: Timestamp;
   readonly ancillaryData: string;
   readonly description: string;
