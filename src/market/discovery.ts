@@ -122,10 +122,10 @@ export function filterMarketsByICAO(
       return true;
     }
     
-    // Check ancillary_data field if present
-    if (market.ancillary_data) {
+    // Check ancillaryData field if present
+    if (market.ancillaryData) {
       const ancillaryMatch = patterns.some(pattern =>
-        pattern.test(market.ancillary_data!)
+        pattern.test(market.ancillaryData!)
       );
       
       if (ancillaryMatch) {

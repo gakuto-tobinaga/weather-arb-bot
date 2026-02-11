@@ -15,17 +15,16 @@ describe('Market Discovery', () => {
       ancillaryData?: string,
       description?: string
     ): GammaMarketResponse => ({
-      condition_id: id,
+      conditionId: id,
       question,
       description,
-      end_date_iso: '2024-01-15T23:59:00Z',
       active: true,
       closed: false,
       tokens: [
-        { token_id: '0xyes', outcome: 'Yes' },
-        { token_id: '0xno', outcome: 'No' }
+        { tokenId: '0xyes', outcome: 'Yes' },
+        { tokenId: '0xno', outcome: 'No' }
       ],
-      ancillary_data: ancillaryData,
+      ancillaryData,
     });
 
     test('should filter markets by ICAO code in question', () => {
@@ -38,7 +37,7 @@ describe('Market Discovery', () => {
       const filtered = filterMarketsByICAO(markets, ['KLGA']);
 
       expect(filtered.length).toBe(1);
-      expect(filtered[0].condition_id).toBe('1');
+      expect(filtered[0].conditionId).toBe('1');
     });
 
     test('should filter markets by multiple ICAO codes', () => {
@@ -52,8 +51,8 @@ describe('Market Discovery', () => {
       const filtered = filterMarketsByICAO(markets, ['KLGA', 'KORD']);
 
       expect(filtered.length).toBe(2);
-      expect(filtered.map(m => m.condition_id)).toContain('1');
-      expect(filtered.map(m => m.condition_id)).toContain('2');
+      expect(filtered.map(m => m.conditionId)).toContain('1');
+      expect(filtered.map(m => m.conditionId)).toContain('2');
     });
 
     test('should be case-insensitive when matching ICAO codes', () => {
@@ -68,7 +67,7 @@ describe('Market Discovery', () => {
       expect(filtered.length).toBe(3);
     });
 
-    test('should filter by ICAO code in ancillary_data', () => {
+    test('should filter by ICAO code in ancillaryData', () => {
       const markets: GammaMarketResponse[] = [
         createMockMarket('1', 'Temperature market', 'Station: KLGA, Threshold: 75°F'),
         createMockMarket('2', 'Temperature market', 'Station: KORD, Threshold: 80°F'),
@@ -78,7 +77,7 @@ describe('Market Discovery', () => {
       const filtered = filterMarketsByICAO(markets, ['KLGA']);
 
       expect(filtered.length).toBe(1);
-      expect(filtered[0].condition_id).toBe('1');
+      expect(filtered[0].conditionId).toBe('1');
     });
 
     test('should filter by ICAO code in description', () => {
@@ -91,7 +90,7 @@ describe('Market Discovery', () => {
       const filtered = filterMarketsByICAO(markets, ['KLGA']);
 
       expect(filtered.length).toBe(1);
-      expect(filtered[0].condition_id).toBe('1');
+      expect(filtered[0].conditionId).toBe('1');
     });
 
     test('should match ICAO code in any field', () => {
@@ -127,13 +126,13 @@ describe('Market Discovery', () => {
       const markets: GammaMarketResponse[] = [
         createMockMarket('1', 'Will temperature at KLGA exceed 75°F?'),
         {
-          condition_id: '2',
+          conditionId: '2',
           question: 'Will temperature at KORD exceed 80°F?',
           end_date_iso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
-          tokens: [{ token_id: '0xyes', outcome: 'Yes' }],
-          // No ancillary_data or description
+          tokens: [{ tokenId: '0xyes', outcome: 'Yes' }],
+          // No ancillaryData or description
         },
       ];
 
@@ -177,8 +176,8 @@ describe('Market Discovery', () => {
       const filtered = filterMarketsByICAO(markets, ['KLGA']);
 
       expect(filtered.length).toBe(2);
-      expect(filtered[0].condition_id).toBe('1');
-      expect(filtered[1].condition_id).toBe('3');
+      expect(filtered[0].conditionId).toBe('1');
+      expect(filtered[1].conditionId).toBe('3');
     });
 
     test('should not modify original array', () => {
@@ -198,27 +197,27 @@ describe('Market Discovery', () => {
     test('should filter realistic weather markets', () => {
       const markets: GammaMarketResponse[] = [
         {
-          condition_id: '0x123',
+          conditionId: '0x123',
           question: 'Will the temperature at LaGuardia Airport (KLGA) exceed 75°F on January 15?',
           description: 'Market resolves based on METAR data from KLGA',
           end_date_iso: '2024-01-15T23:59:00-05:00',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes', outcome: 'Yes', price: '0.45' },
-            { token_id: '0xno', outcome: 'No', price: '0.55' }
+            { tokenId: '0xyes', outcome: 'Yes', price: '0.45' },
+            { tokenId: '0xno', outcome: 'No', price: '0.55' }
           ],
-          ancillary_data: 'Station: KLGA, Observation end: 2024-01-15 23:59 ET'
+          ancillaryData: 'Station: KLGA, Observation end: 2024-01-15 23:59 ET'
         },
         {
-          condition_id: '0x456',
+          conditionId: '0x456',
           question: 'Will Bitcoin exceed $50,000?',
           end_date_iso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes', outcome: 'Yes' },
-            { token_id: '0xno', outcome: 'No' }
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
           ]
         }
       ];

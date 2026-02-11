@@ -37,11 +37,11 @@ function extractICAOCode(marketData: GammaMarketResponse): ICAOCode | null {
     }
   }
   
-  // Search in ancillary_data
-  if (marketData.ancillary_data) {
+  // Search in ancillaryData
+  if (marketData.ancillaryData) {
     for (const code of validCodes) {
       const pattern = new RegExp(`\\b${code}\\b`, 'i');
-      if (pattern.test(marketData.ancillary_data)) {
+      if (pattern.test(marketData.ancillaryData)) {
         return code;
       }
     }
@@ -88,15 +88,15 @@ function extractThreshold(marketData: GammaMarketResponse): PrecisionTemperature
     return PrecisionTemperature.fromCelsius(tempC);
   }
   
-  // Search in ancillary_data
-  if (marketData.ancillary_data) {
-    match = marketData.ancillary_data.match(fahrenheitPattern);
+  // Search in ancillaryData
+  if (marketData.ancillaryData) {
+    match = marketData.ancillaryData.match(fahrenheitPattern);
     if (match) {
       const tempF = parseFloat(match[1]);
       return PrecisionTemperature.fromFahrenheit(tempF);
     }
     
-    match = marketData.ancillary_data.match(celsiusPattern);
+    match = marketData.ancillaryData.match(celsiusPattern);
     if (match) {
       const tempC = parseFloat(match[1]);
       return PrecisionTemperature.fromCelsius(tempC);
@@ -132,10 +132,10 @@ export function extractMarketData(
   marketData: GammaMarketResponse
 ): MarketExtractionResult {
   // Extract condition ID
-  const conditionId = marketData.condition_id;
+  const conditionId = marketData.conditionId;
   
   // Extract token IDs
-  if (marketData.tokens.length < 2) {
+  if (!marketData.tokens || marketData.tokens.length < 2) {
     return {
       success: false,
       error: 'Market must have at least 2 tokens (Yes/No)'
@@ -175,11 +175,11 @@ export function extractMarketData(
   }
   
   // Extract observation end time from ancillary data
-  const ancillaryData = marketData.ancillary_data || marketData.umadata || '';
+  const ancillaryData = marketData.ancillaryData || marketData.umadata || '';
   if (!ancillaryData) {
     return {
       success: false,
-      error: 'Market missing ancillary_data field'
+      error: 'Market missing ancillaryData field'
     };
   }
   
@@ -194,8 +194,8 @@ export function extractMarketData(
   // Build Market object
   const market: Market = {
     conditionId,
-    yesTokenId: yesToken.token_id,
-    noTokenId: noToken.token_id,
+    yesTokenId: yesToken.tokenId,
+    noTokenId: noToken.tokenId,
     icaoCode,
     threshold,
     observationEnd: timeResult.observationEnd,

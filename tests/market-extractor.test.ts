@@ -11,16 +11,16 @@ describe('Market Data Extractor', () => {
   describe('extractMarketData', () => {
     test('should extract data from valid market with Fahrenheit threshold', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123abc',
+        conditionId: '0x123abc',
         question: 'Will temperature at KLGA exceed 75°F on January 15?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59, Threshold: 75°F'
+        ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59, Threshold: 75°F'
       };
 
       const result = extractMarketData(marketData);
@@ -42,16 +42,16 @@ describe('Market Data Extractor', () => {
 
     test('should extract data from market with Celsius threshold', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x456def',
+        conditionId: '0x456def',
         question: 'Will temperature at EGLC exceed 20°C?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'Station: EGLC, observation end: 2024-01-15 23:59'
+        ancillaryData: 'Station: EGLC, observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -76,16 +76,16 @@ describe('Market Data Extractor', () => {
 
       for (const format of formats) {
         const marketData: GammaMarketResponse = {
-          condition_id: '0x123',
+          conditionId: '0x123',
           question: `Will temperature exceed ${format}?`,
-          end_date_iso: '2024-01-15T23:59:00Z',
+          endDateIso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes', outcome: 'Yes' },
-            { token_id: '0xno', outcome: 'No' }
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
           ],
-          ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59'
+          ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
         };
 
         const result = extractMarketData(marketData);
@@ -95,16 +95,16 @@ describe('Market Data Extractor', () => {
 
     test('should extract ICAO code from question', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature at KORD exceed 80°F?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'observation end: 2024-01-15 23:59'
+        ancillaryData: 'observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -115,18 +115,18 @@ describe('Market Data Extractor', () => {
       }
     });
 
-    test('should extract ICAO code from ancillary_data', () => {
+    test('should extract ICAO code from ancillaryData', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature exceed 75°F?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59'
+        ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -137,18 +137,18 @@ describe('Market Data Extractor', () => {
       }
     });
 
-    test('should extract threshold from ancillary_data if not in question', () => {
+    test('should extract threshold from ancillaryData if not in question', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature exceed threshold?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'Station: KLGA, Threshold: 75°F, observation end: 2024-01-15 23:59'
+        ancillaryData: 'Station: KLGA, Threshold: 75°F, observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -162,16 +162,16 @@ describe('Market Data Extractor', () => {
 
     test('should return error for market with insufficient tokens', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature at KLGA exceed 75°F?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' }
+          { tokenId: '0xyes', outcome: 'Yes' }
           // Missing No token
         ],
-        ancillary_data: 'observation end: 2024-01-15 23:59'
+        ancillaryData: 'observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -184,16 +184,16 @@ describe('Market Data Extractor', () => {
 
     test('should return error for market without ICAO code', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature exceed 75°F?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'observation end: 2024-01-15 23:59'
+        ancillaryData: 'observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -206,16 +206,16 @@ describe('Market Data Extractor', () => {
 
     test('should return error for market without threshold', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature at KLGA be high?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ],
-        ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59'
+        ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -226,16 +226,16 @@ describe('Market Data Extractor', () => {
       }
     });
 
-    test('should return error for market without ancillary_data', () => {
+    test('should return error for market without ancillaryData', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature at KLGA exceed 75°F?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'Yes' },
-          { token_id: '0xno', outcome: 'No' }
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
         ]
       };
 
@@ -243,22 +243,22 @@ describe('Market Data Extractor', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toContain('ancillary_data');
+        expect(result.error).toContain('ancillaryData');
       }
     });
 
     test('should handle case-insensitive token outcomes', () => {
       const marketData: GammaMarketResponse = {
-        condition_id: '0x123',
+        conditionId: '0x123',
         question: 'Will temperature at KLGA exceed 75°F?',
-        end_date_iso: '2024-01-15T23:59:00Z',
+        endDateIso: '2024-01-15T23:59:00Z',
         active: true,
         closed: false,
         tokens: [
-          { token_id: '0xyes', outcome: 'YES' },
-          { token_id: '0xno', outcome: 'NO' }
+          { tokenId: '0xyes', outcome: 'YES' },
+          { tokenId: '0xno', outcome: 'NO' }
         ],
-        ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59'
+        ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
       };
 
       const result = extractMarketData(marketData);
@@ -271,28 +271,28 @@ describe('Market Data Extractor', () => {
     test('should extract multiple valid markets', () => {
       const marketsData: GammaMarketResponse[] = [
         {
-          condition_id: '0x123',
+          conditionId: '0x123',
           question: 'Will temperature at KLGA exceed 75°F?',
-          end_date_iso: '2024-01-15T23:59:00Z',
+          endDateIso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes1', outcome: 'Yes' },
-            { token_id: '0xno1', outcome: 'No' }
+            { tokenId: '0xyes1', outcome: 'Yes' },
+            { tokenId: '0xno1', outcome: 'No' }
           ],
-          ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59'
+          ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
         },
         {
-          condition_id: '0x456',
+          conditionId: '0x456',
           question: 'Will temperature at KORD exceed 80°F?',
-          end_date_iso: '2024-01-15T23:59:00Z',
+          endDateIso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes2', outcome: 'Yes' },
-            { token_id: '0xno2', outcome: 'No' }
+            { tokenId: '0xyes2', outcome: 'Yes' },
+            { tokenId: '0xno2', outcome: 'No' }
           ],
-          ancillary_data: 'Station: KORD, observation end: 2024-01-15 23:59'
+          ancillaryData: 'Station: KORD, observation end: 2024-01-15 23:59'
         }
       ];
 
@@ -306,28 +306,28 @@ describe('Market Data Extractor', () => {
     test('should skip invalid markets and return only valid ones', () => {
       const marketsData: GammaMarketResponse[] = [
         {
-          condition_id: '0x123',
+          conditionId: '0x123',
           question: 'Will temperature at KLGA exceed 75°F?',
-          end_date_iso: '2024-01-15T23:59:00Z',
+          endDateIso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes', outcome: 'Yes' },
-            { token_id: '0xno', outcome: 'No' }
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
           ],
-          ancillary_data: 'Station: KLGA, observation end: 2024-01-15 23:59'
+          ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
         },
         {
-          condition_id: '0x456',
+          conditionId: '0x456',
           question: 'Invalid market without threshold',
-          end_date_iso: '2024-01-15T23:59:00Z',
+          endDateIso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
           tokens: [
-            { token_id: '0xyes', outcome: 'Yes' },
-            { token_id: '0xno', outcome: 'No' }
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
           ],
-          ancillary_data: 'Station: KORD, observation end: 2024-01-15 23:59'
+          ancillaryData: 'Station: KORD, observation end: 2024-01-15 23:59'
         }
       ];
 
@@ -340,13 +340,13 @@ describe('Market Data Extractor', () => {
     test('should return empty array for all invalid markets', () => {
       const marketsData: GammaMarketResponse[] = [
         {
-          condition_id: '0x123',
+          conditionId: '0x123',
           question: 'Invalid market',
-          end_date_iso: '2024-01-15T23:59:00Z',
+          endDateIso: '2024-01-15T23:59:00Z',
           active: true,
           closed: false,
-          tokens: [{ token_id: '0xyes', outcome: 'Yes' }],
-          ancillary_data: 'observation end: 2024-01-15 23:59'
+          tokens: [{ tokenId: '0xyes', outcome: 'Yes' }],
+          ancillaryData: 'observation end: 2024-01-15 23:59'
         }
       ];
 

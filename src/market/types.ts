@@ -33,36 +33,38 @@ export type Market = {
  * 
  * Validates the structure of market data returned from
  * Polymarket Gamma API.
+ * 
+ * NOTE: Gamma API uses camelCase for field names, not snake_case
  */
 export const GammaMarketResponseSchema = z.object({
-  condition_id: z.string(),
+  conditionId: z.string(),
   question: z.string(),
   description: z.string().optional(),
-  end_date_iso: z.string(),
-  game_start_time: z.string().optional(),
-  question_id: z.string().optional(),
-  market_slug: z.string().optional(),
-  min_incentive_size: z.number().optional(),
-  max_incentive_spread: z.number().optional(),
+  endDateIso: z.string().optional(),
+  gameStartTime: z.string().optional(),
+  questionId: z.string().optional(),
+  marketSlug: z.string().optional(),
+  minIncentiveSize: z.number().optional(),
+  maxIncentiveSpread: z.number().optional(),
   active: z.boolean(),
   closed: z.boolean(),
   archived: z.boolean().optional(),
-  accepting_orders: z.boolean().optional(),
+  acceptingOrders: z.boolean().optional(),
   tokens: z.array(z.object({
-    token_id: z.string(),
+    tokenId: z.string(),
     outcome: z.string(),
     price: z.string().optional(),
     winner: z.boolean().optional(),
-  })),
+  })).optional().default([]),
   rewards: z.object({
-    min_size: z.string().optional(),
-    max_spread: z.string().optional(),
-    event_start_date: z.string().optional(),
-    event_end_date: z.string().optional(),
+    minSize: z.string().optional(),
+    maxSpread: z.string().optional(),
+    eventStartDate: z.string().optional(),
+    eventEndDate: z.string().optional(),
   }).optional(),
   // Ancillary data contains settlement rules and observation end time
   // This field may be in different locations depending on API version
-  ancillary_data: z.string().optional(),
+  ancillaryData: z.string().optional(),
   umadata: z.string().optional(),
 });
 
