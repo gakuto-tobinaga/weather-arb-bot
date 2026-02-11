@@ -227,5 +227,117 @@ describe('Market Discovery', () => {
       expect(filtered.length).toBe(1);
       expect(filtered[0].question).toContain('KLGA');
     });
+
+    // 画面キャプチャに基づいた新しいテストケース
+    test('should detect NYC (LGA) pattern in question', () => {
+      const markets: GammaMarketResponse[] = [
+        {
+          conditionId: '0x123',
+          question: 'Will NYC (LGA) temperature be 42-43?',
+          end_date_iso: '2024-01-15T23:59:00Z',
+          active: true,
+          closed: false,
+          tokens: [
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
+          ],
+          ancillaryData: 'observation end: 2024-01-15 23:59'
+        }
+      ];
+
+      const filtered = filterMarketsByICAO(markets, ['KLGA']);
+
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].conditionId).toBe('0x123');
+    });
+
+    test('should detect Chicago (ORD) pattern in question', () => {
+      const markets: GammaMarketResponse[] = [
+        {
+          conditionId: '0x456',
+          question: 'Will Chicago (ORD) temperature be 12?',
+          end_date_iso: '2024-01-15T23:59:00Z',
+          active: true,
+          closed: false,
+          tokens: [
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
+          ],
+          ancillaryData: 'observation end: 2024-01-15 23:59'
+        }
+      ];
+
+      const filtered = filterMarketsByICAO(markets, ['KORD']);
+
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].conditionId).toBe('0x456');
+    });
+
+    test('should detect New York City pattern', () => {
+      const markets: GammaMarketResponse[] = [
+        {
+          conditionId: '0x789',
+          question: 'Will New York City temperature be 50?',
+          end_date_iso: '2024-01-15T23:59:00Z',
+          active: true,
+          closed: false,
+          tokens: [
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
+          ],
+          ancillaryData: 'observation end: 2024-01-15 23:59'
+        }
+      ];
+
+      const filtered = filterMarketsByICAO(markets, ['KLGA']);
+
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].conditionId).toBe('0x789');
+    });
+
+    test('should detect London City pattern', () => {
+      const markets: GammaMarketResponse[] = [
+        {
+          conditionId: '0xabc',
+          question: 'Will London City temperature be 15?',
+          end_date_iso: '2024-01-15T23:59:00Z',
+          active: true,
+          closed: false,
+          tokens: [
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
+          ],
+          ancillaryData: 'observation end: 2024-01-15 23:59'
+        }
+      ];
+
+      const filtered = filterMarketsByICAO(markets, ['EGLC']);
+
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].conditionId).toBe('0xabc');
+    });
+
+    test('should detect city names in description field', () => {
+      const markets: GammaMarketResponse[] = [
+        {
+          conditionId: '0xdef',
+          question: 'Temperature market',
+          description: 'NYC (LGA) weather prediction',
+          end_date_iso: '2024-01-15T23:59:00Z',
+          active: true,
+          closed: false,
+          tokens: [
+            { tokenId: '0xyes', outcome: 'Yes' },
+            { tokenId: '0xno', outcome: 'No' }
+          ],
+          ancillaryData: 'observation end: 2024-01-15 23:59'
+        }
+      ];
+
+      const filtered = filterMarketsByICAO(markets, ['KLGA']);
+
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].conditionId).toBe('0xdef');
+    });
   });
 });

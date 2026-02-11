@@ -7,6 +7,7 @@
 
 import { parseObservationEndTime } from '../timezone/ancillary-parser';
 import { PrecisionTemperature } from '../types/temperature';
+import { Timestamp } from '../types/timestamp';
 import type { GammaMarketResponse } from './types';
 import type { Market } from './types';
 import type { ICAOCode } from '../config';
@@ -30,20 +31,39 @@ type CityMapping = {
 
 /**
  * City name to ICAO code mappings
+ * 超柔軟な都市名パターンマッチング
  */
 const CITY_MAPPINGS: CityMapping[] = [
   {
-    patterns: [/\bNYC\b/i, /\bNew York\b/i, /\bLaGuardia\b/i],
+    patterns: [
+      /\bNYC\b/i,
+      /\bNew York City\b/i,
+      /\bNew York\b/i,
+      /\bLaGuardia\b/i,
+      /\bLGA\b/i,
+      /NYC\s*\(LGA\)/i,
+      /New York City\s*\(LGA\)/i
+    ],
     icaoCode: 'KLGA',
     defaultUnit: 'F'
   },
   {
-    patterns: [/\bChicago\b/i, /\bO'Hare\b/i, /\bOHare\b/i],
+    patterns: [
+      /\bChicago\b/i,
+      /\bO'Hare\b/i,
+      /\bOHare\b/i,
+      /\bORD\b/i,
+      /Chicago\s*\(ORD\)/i
+    ],
     icaoCode: 'KORD',
     defaultUnit: 'F'
   },
   {
-    patterns: [/\bLondon\b/i, /\bLondon City\b/i],
+    patterns: [
+      /\bLondon\b/i,
+      /\bLondon City\b/i,
+      /\bEGLC\b/i
+    ],
     icaoCode: 'EGLC',
     defaultUnit: 'C'
   }
@@ -90,7 +110,7 @@ type TemperatureSpec =
  * 
  * Extracts temperature ranges, ceilings, floors, or single thresholds
  * from market question text. Supports multiple formats:
- * - Range: "40-41°F", "40 to 41°C"
+ * - Range: "40-41°F", "40 to 41°C", "40-41" (with default unit)
  * - Ceiling: "75 or higher", "75+", "> 75"
  * - Floor: "40 or below", "< 40"
  * - Single: "75°F"
@@ -107,11 +127,14 @@ function parseTemperatureSpec(
   // Priority 2: Use default unit from city detection
   // Priority 3: Fail if no unit can be determined
   
-  // Range patterns: "40-41°F", "40-41 F", "40 to 41°F"
+  // Range patterns with explicit unit: "40-41°F", "40-41 F", "40 to 41°F"
   const rangePatterns = [
     /(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*(?:°|degrees?)?\s*([FC])\b/i,
     /(\d+(?:\.\d+)?)\s+to\s+(\d+(?:\.\d+)?)\s*(?:°|degrees?)?\s*([FC])\b/i
   ];
+  
+  // Range patterns without explicit unit (for use with default unit): "40-41", "40 to 41"
+  const rangePatternNoUnit = /(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\b/;
   
   // Ceiling patterns: "75 or higher", "75 or above", "75+", "> 75", "above 75", "greater than 75"
   const ceilingPatterns = [
@@ -142,7 +165,7 @@ function parseTemperatureSpec(
     /(?:below|less than)\s+(\d+(?:\.\d+)?)\b/i
   ];
   
-  // Try range patterns
+  // Try range patterns with explicit unit
   for (const pattern of rangePatterns) {
     const match = text.match(pattern);
     if (match) {
@@ -155,6 +178,21 @@ function parseTemperatureSpec(
       }
       
       return { type: 'range', min, max, unit };
+    }
+  }
+  
+  // Try range pattern without explicit unit (use default unit)
+  if (defaultUnit) {
+    const match = text.match(rangePatternNoUnit);
+    if (match) {
+      const min = parseFloat(match[1]);
+      const max = parseFloat(match[2]);
+      
+      if (min > max) {
+        throw new Error(`Invalid range: min (${min}) > max (${max})`);
+      }
+      
+      return { type: 'range', min, max, unit: defaultUnit };
     }
   }
   
@@ -207,13 +245,33 @@ function parseTemperatureSpec(
     return { type: 'single', value, unit };
   }
   
-  // Try single threshold with default unit
+  // Try single threshold with default unit (超柔軟: 単位なしでも都市のデフォルト単位を使用)
+  // 重要: 日付（2024-01-15など）を誤検出しないように、温度らしい数値のみを抽出
   if (defaultUnit) {
-    const numberPattern = /(\d+(?:\.\d+)?)/;
-    const match = text.match(numberPattern);
+    // 温度として妥当な範囲の数値を検出: -50〜150の範囲（°F/°Cの両方をカバー）
+    // 日付の年（2024など）を避けるため、"temperature"や"temp"などのキーワードの近くにある数値を優先
+    const tempKeywordPattern = /(?:temperature|temp|be|reach|hit)\s+(\d{1,3}(?:\.\d+)?)\b/i;
+    let match = text.match(tempKeywordPattern);
+    
     if (match) {
       const value = parseFloat(match[1]);
-      return { type: 'single', value, unit: defaultUnit };
+      // 温度として妥当な範囲かチェック
+      if (value >= -50 && value <= 150) {
+        return { type: 'single', value, unit: defaultUnit };
+      }
+    }
+    
+    // キーワードがない場合は、より慎重に数値を抽出
+    // 日付パターン（YYYY-MM-DD, YYYY/MM/DD）を避ける
+    const safeNumberPattern = /\b(\d{1,3}(?:\.\d+)?)\b(?!\s*[-/]\s*\d)/;
+    match = text.match(safeNumberPattern);
+    
+    if (match) {
+      const value = parseFloat(match[1]);
+      // 温度として妥当な範囲かチェック（日付の年を除外）
+      if (value >= -50 && value <= 150) {
+        return { type: 'single', value, unit: defaultUnit };
+      }
     }
   }
   
@@ -340,23 +398,46 @@ export function extractMarketData(
   let icaoCode = extractICAOCode(marketData);
   let defaultUnit: 'F' | 'C' | null = null;
   
-  // Step 2: If no ICAO code found, try city name detection
+  // Step 2: If no ICAO code found, try city name detection from all available fields
   if (!icaoCode) {
+    // Try question first
     const cityDetection = detectCityAndUnit(marketData.question);
     icaoCode = cityDetection.icaoCode;
     defaultUnit = cityDetection.defaultUnit;
     
-    // Also check ancillaryData and description
+    // If not found in question, try description (parent event title)
+    if (!icaoCode && marketData.description) {
+      const descDetection = detectCityAndUnit(marketData.description);
+      icaoCode = descDetection.icaoCode;
+      defaultUnit = descDetection.defaultUnit;
+    }
+    
+    // If still not found, try ancillaryData
     if (!icaoCode && marketData.ancillaryData) {
       const ancillaryDetection = detectCityAndUnit(marketData.ancillaryData);
       icaoCode = ancillaryDetection.icaoCode;
       defaultUnit = ancillaryDetection.defaultUnit;
     }
+  } else {
+    // ICAO code found directly, but we still need to determine default unit
+    // Check all fields for city name to get the default unit
+    const questionDetection = detectCityAndUnit(marketData.question);
+    if (questionDetection.defaultUnit) {
+      defaultUnit = questionDetection.defaultUnit;
+    }
     
-    if (!icaoCode && marketData.description) {
+    if (!defaultUnit && marketData.description) {
       const descDetection = detectCityAndUnit(marketData.description);
-      icaoCode = descDetection.icaoCode;
-      defaultUnit = descDetection.defaultUnit;
+      if (descDetection.defaultUnit) {
+        defaultUnit = descDetection.defaultUnit;
+      }
+    }
+    
+    if (!defaultUnit && marketData.ancillaryData) {
+      const ancillaryDetection = detectCityAndUnit(marketData.ancillaryData);
+      if (ancillaryDetection.defaultUnit) {
+        defaultUnit = ancillaryDetection.defaultUnit;
+      }
     }
   }
   
@@ -370,25 +451,65 @@ export function extractMarketData(
   // Extract condition ID
   const conditionId = marketData.conditionId;
   
-  // Extract token IDs
-  if (!marketData.tokens || marketData.tokens.length < 2) {
-    return {
-      success: false,
-      error: 'Market must have at least 2 tokens (Yes/No)'
-    };
+  // Extract token IDs - support both old and new API formats
+  let yesTokenId: string;
+  let noTokenId: string;
+  
+  // Try new API format first (clobTokenIds + outcomes)
+  if (marketData.clobTokenIds && marketData.outcomes) {
+    try {
+      const tokenIds = JSON.parse(marketData.clobTokenIds);
+      const outcomes = JSON.parse(marketData.outcomes);
+      
+      if (!Array.isArray(tokenIds) || !Array.isArray(outcomes) || tokenIds.length < 2 || outcomes.length < 2) {
+        return {
+          success: false,
+          error: 'Market must have at least 2 tokens (Yes/No)'
+        };
+      }
+      
+      // Find Yes/No token indices
+      const yesIndex = outcomes.findIndex((o: string) => o.toLowerCase() === 'yes');
+      const noIndex = outcomes.findIndex((o: string) => o.toLowerCase() === 'no');
+      
+      if (yesIndex === -1 || noIndex === -1) {
+        return {
+          success: false,
+          error: 'Could not find Yes/No outcomes'
+        };
+      }
+      
+      yesTokenId = tokenIds[yesIndex];
+      noTokenId = tokenIds[noIndex];
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to parse token IDs: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
-  
-  const yesToken = marketData.tokens.find(t => 
-    t.outcome.toLowerCase() === 'yes'
-  );
-  const noToken = marketData.tokens.find(t => 
-    t.outcome.toLowerCase() === 'no'
-  );
-  
-  if (!yesToken || !noToken) {
+  // Fall back to old API format (tokens array)
+  else if (marketData.tokens && marketData.tokens.length >= 2) {
+    const yesToken = marketData.tokens.find(t => 
+      t.outcome.toLowerCase() === 'yes'
+    );
+    const noToken = marketData.tokens.find(t => 
+      t.outcome.toLowerCase() === 'no'
+    );
+    
+    if (!yesToken || !noToken) {
+      return {
+        success: false,
+        error: 'Could not find Yes/No tokens'
+      };
+    }
+    
+    yesTokenId = yesToken.tokenId;
+    noTokenId = noToken.tokenId;
+  } else {
     return {
       success: false,
-      error: 'Could not find Yes/No tokens'
+      error: 'Market must have token information (either tokens array or clobTokenIds)'
     };
   }
   
@@ -398,7 +519,12 @@ export function extractMarketData(
     // Try parsing from question first
     let parsed = parseTemperatureSpec(marketData.question, defaultUnit);
     
-    // If not found in question, try ancillaryData
+    // If not found in question, try description
+    if (!parsed && marketData.description) {
+      parsed = parseTemperatureSpec(marketData.description, defaultUnit);
+    }
+    
+    // If not found in description, try ancillaryData
     if (!parsed && marketData.ancillaryData) {
       parsed = parseTemperatureSpec(marketData.ancillaryData, defaultUnit);
     }
@@ -458,34 +584,54 @@ export function extractMarketData(
       break;
   }
   
-  // Extract observation end time from ancillary data
-  const ancillaryData = marketData.ancillaryData || marketData.umadata || '';
-  if (!ancillaryData) {
-    return {
-      success: false,
-      error: 'Market missing ancillaryData field'
-    };
-  }
+  // Extract observation end time
+  // New API: use endDate or endDateIso
+  // Old API: parse from ancillaryData
+  let observationEnd: Timestamp;
   
-  const timeResult = parseObservationEndTime(ancillaryData, icaoCode);
-  if (!timeResult.success) {
-    return {
-      success: false,
-      error: `Failed to parse observation end time: ${timeResult.error}`
-    };
+  if (marketData.endDate || marketData.endDateIso) {
+    // New API format: use endDate field
+    const endDateStr = marketData.endDate || marketData.endDateIso;
+    try {
+      const endDate = new Date(endDateStr!);
+      observationEnd = Timestamp.fromUTC(endDate);
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to parse endDate: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  } else {
+    // Old API format: parse from ancillaryData
+    const ancillaryData = marketData.ancillaryData || marketData.umadata || '';
+    if (!ancillaryData) {
+      return {
+        success: false,
+        error: 'Market missing endDate and ancillaryData fields'
+      };
+    }
+    
+    const timeResult = parseObservationEndTime(ancillaryData, icaoCode);
+    if (!timeResult.success) {
+      return {
+        success: false,
+        error: `Failed to parse observation end time: ${timeResult.error}`
+      };
+    }
+    observationEnd = timeResult.observationEnd;
   }
   
   // Build Market object
   const market: Market = {
     conditionId,
-    yesTokenId: yesToken.tokenId,
-    noTokenId: noToken.tokenId,
+    yesTokenId,
+    noTokenId,
     icaoCode,
     threshold,
     minThreshold,
     maxThreshold,
-    observationEnd: timeResult.observationEnd,
-    ancillaryData,
+    observationEnd,
+    ancillaryData: marketData.ancillaryData || marketData.description || marketData.question,
     description: marketData.question,
     active: marketData.active,
   };

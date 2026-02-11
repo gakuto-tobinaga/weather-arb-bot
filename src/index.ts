@@ -119,7 +119,7 @@ class MainController {
    */
   private async runTradingCycle(): Promise<void> {
     const { fetchAllStations } = await import('./metar/client');
-    const { discoverMarkets } = await import('./market/discovery');
+    const { discoverMarketsForStations } = await import('./market/discovery');
     const { extractMultipleMarkets } = await import('./market/extractor');
     const { Timestamp } = await import('./types/timestamp');
     const { logTradingSignal, logPnLUpdate } = await import('./logger');
@@ -149,7 +149,7 @@ class MainController {
 
     // 3. Discover active markets
     console.log('Discovering active markets...');
-    const discoveryResult = await discoverMarkets();
+    const discoveryResult = await discoverMarketsForStations(this.config.TARGET_ICAO);
     
     if (!discoveryResult.success) {
       console.log(`  Failed to discover markets: ${discoveryResult.error}\n`);

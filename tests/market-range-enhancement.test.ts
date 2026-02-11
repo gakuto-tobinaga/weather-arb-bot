@@ -76,6 +76,28 @@ describe('Market Range Enhancement', () => {
         expect(result.market.icaoCode).toBe('EGLC');
       }
     });
+
+    test('should detect city from description when question only has numbers', () => {
+      const marketData: GammaMarketResponse = {
+        conditionId: '0x123',
+        question: 'Will temperature be 40-41?',
+        description: 'NYC Weather - Daily Temperature',
+        active: true,
+        closed: false,
+        tokens: [
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
+        ],
+        ancillaryData: 'observation end: 2024-01-15 23:59'
+      };
+
+      const result = extractMarketData(marketData);
+      
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.market.icaoCode).toBe('KLGA');
+      }
+    });
   });
 
   describe('Temperature Range Parsing', () => {
@@ -99,6 +121,34 @@ describe('Market Range Enhancement', () => {
         const minC = PrecisionTemperature.value(result.market.minThreshold);
         const maxC = PrecisionTemperature.value(result.market.maxThreshold);
         
+        // 40°F ≈ 4.4°C, 41°F ≈ 5.0°C
+        expect(minC).toBeCloseTo(4.4, 1);
+        expect(maxC).toBeCloseTo(5.0, 1);
+      }
+    });
+
+    test('should parse temperature range without unit using default unit from description', () => {
+      const marketData: GammaMarketResponse = {
+        conditionId: '0x123',
+        question: 'Will temperature be 40-41?',
+        description: 'NYC Weather Markets',
+        active: true,
+        closed: false,
+        tokens: [
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
+        ],
+        ancillaryData: 'observation end: 2024-01-15 23:59'
+      };
+
+      const result = extractMarketData(marketData);
+      
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const minC = PrecisionTemperature.value(result.market.minThreshold);
+        const maxC = PrecisionTemperature.value(result.market.maxThreshold);
+        
+        // Should use Fahrenheit as default unit for NYC
         // 40°F ≈ 4.4°C, 41°F ≈ 5.0°C
         expect(minC).toBeCloseTo(4.4, 1);
         expect(maxC).toBeCloseTo(5.0, 1);

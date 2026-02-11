@@ -265,6 +265,112 @@ describe('Market Data Extractor', () => {
 
       expect(result.success).toBe(true);
     });
+
+    // 画面キャプチャに基づいた新しいテストケース
+    test('should detect NYC (LGA) pattern and use Fahrenheit as default', () => {
+      const marketData: GammaMarketResponse = {
+        conditionId: '0x123',
+        question: 'Will NYC (LGA) temperature be 42-43?',
+        endDateIso: '2024-01-15T23:59:00Z',
+        active: true,
+        closed: false,
+        tokens: [
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
+        ],
+        ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
+      };
+
+      const result = extractMarketData(marketData);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.market.icaoCode).toBe('KLGA');
+        // 42-43°F range should be detected
+        const minTempC = PrecisionTemperature.value(result.market.minThreshold);
+        const maxTempC = PrecisionTemperature.value(result.market.maxThreshold);
+        expect(minTempC).toBeCloseTo(5.6, 1); // 42°F ≈ 5.6°C
+        expect(maxTempC).toBeCloseTo(6.1, 1); // 43°F ≈ 6.1°C
+      }
+    });
+
+    test('should detect Chicago (ORD) pattern and use Fahrenheit as default', () => {
+      const marketData: GammaMarketResponse = {
+        conditionId: '0x456',
+        question: 'Will Chicago (ORD) temperature be 12?',
+        endDateIso: '2024-01-15T23:59:00Z',
+        active: true,
+        closed: false,
+        tokens: [
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
+        ],
+        ancillaryData: 'Station: KORD, observation end: 2024-01-15 23:59'
+      };
+
+      const result = extractMarketData(marketData);
+      
+      if (!result.success) {
+        console.log('Error:', result.error);
+      }
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.market.icaoCode).toBe('KORD');
+        // 12°F should be detected
+        const thresholdC = PrecisionTemperature.value(result.market.threshold);
+        expect(thresholdC).toBeCloseTo(-11.1, 1); // 12°F ≈ -11.1°C
+      }
+    });
+
+    test('should detect New York City pattern', () => {
+      const marketData: GammaMarketResponse = {
+        conditionId: '0x789',
+        question: 'Will New York City temperature be 50?',
+        endDateIso: '2024-01-15T23:59:00Z',
+        active: true,
+        closed: false,
+        tokens: [
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
+        ],
+        ancillaryData: 'Station: KLGA, observation end: 2024-01-15 23:59'
+      };
+
+      const result = extractMarketData(marketData);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.market.icaoCode).toBe('KLGA');
+        const thresholdC = PrecisionTemperature.value(result.market.threshold);
+        expect(thresholdC).toBeCloseTo(10.0, 1); // 50°F = 10°C
+      }
+    });
+
+    test('should detect London City pattern and use Celsius as default', () => {
+      const marketData: GammaMarketResponse = {
+        conditionId: '0xabc',
+        question: 'Will London City temperature be 15?',
+        endDateIso: '2024-01-15T23:59:00Z',
+        active: true,
+        closed: false,
+        tokens: [
+          { tokenId: '0xyes', outcome: 'Yes' },
+          { tokenId: '0xno', outcome: 'No' }
+        ],
+        ancillaryData: 'Station: EGLC, observation end: 2024-01-15 23:59'
+      };
+
+      const result = extractMarketData(marketData);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.market.icaoCode).toBe('EGLC');
+        // 15°C should be detected (no conversion needed)
+        const thresholdC = PrecisionTemperature.value(result.market.threshold);
+        expect(thresholdC).toBe(15.0);
+      }
+    });
   });
 
   describe('extractMultipleMarkets', () => {

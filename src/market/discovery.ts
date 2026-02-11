@@ -20,10 +20,10 @@ export type MarketDiscoveryResult =
   | { success: false; error: string };
 
 /**
- * Discover active markets from Polymarket Gamma API
+ * Discover active weather markets from Polymarket Gamma API
  * 
- * Queries the Gamma API for all active markets. The response includes
- * market metadata, token IDs, and ancillary data needed for trading.
+ * Queries the Gamma API for weather-tagged events and extracts their markets.
+ * Uses the /events/pagination endpoint with tag_slug=weather for efficient filtering.
  * 
  * @param activeOnly - If true, only return active markets (default: true)
  * @returns Result with array of markets or error
@@ -40,15 +40,21 @@ export async function discoverMarkets(
   activeOnly: boolean = true
 ): Promise<MarketDiscoveryResult> {
   try {
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (activeOnly) {
-      params.append('active', 'true');
-    }
+    // Build query parameters for weather events
+    const params = new URLSearchParams({
+      limit: '100',
+      active: 'true',
+      archived: 'false',
+      tag_slug: 'weather',
+      closed: 'false',
+      order: 'volume24hr',
+      ascending: 'false',
+      offset: '0'
+    });
     
-    const url = `${GAMMA_API_BASE_URL}/markets?${params.toString()}`;
+    const url = `${GAMMA_API_BASE_URL}/events/pagination?${params.toString()}`;
     
-    // Fetch markets from Gamma API
+    // Fetch weather events from Gamma API
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -65,9 +71,25 @@ export async function discoverMarkets(
 
     const data = await response.json();
     
+    // Extract markets from events
+    // The response structure is { data: [events...], count: number }
+    const events = data.data || [];
+    const allMarkets: GammaMarketResponse[] = [];
+    
+    for (const event of events) {
+      if (event.markets && Array.isArray(event.markets)) {
+        // Filter by active status if requested
+        const markets = activeOnly 
+          ? event.markets.filter((m: any) => m.active === true && m.closed === false)
+          : event.markets;
+        
+        allMarkets.push(...markets);
+      }
+    }
+    
     // Validate response structure
     try {
-      const markets = validateMarketsArray(data);
+      const markets = validateMarketsArray(allMarkets);
       
       return {
         success: true,
@@ -91,8 +113,11 @@ export async function discoverMarkets(
  * Filter markets by ICAO codes
  * 
  * Filters a list of markets to only include those that reference
- * one of the specified ICAO airport codes in their question or
- * ancillary data.
+ * one of the specified ICAO airport codes OR city names in their question,
+ * ancillary data, or description.
+ * 
+ * 超柔軟な都市名パターンマッチングを使用して、
+ * "NYC (LGA)", "Chicago (ORD)", "London City" などのパターンも検出します。
  * 
  * @param markets - Array of markets to filter
  * @param icaoCodes - Array of ICAO codes to filter by
@@ -107,56 +132,85 @@ export function filterMarketsByICAO(
   markets: GammaMarketResponse[],
   icaoCodes: ICAOCode[]
 ): GammaMarketResponse[] {
-  return markets.filter(market => {
-    // Create regex patterns for exact ICAO code matching (word boundaries)
-    const patterns = icaoCodes.map(code => 
-      new RegExp(`\\b${code}\\b`, 'i')
-    );
-    
-    // Check question field
-    const questionMatch = patterns.some(pattern => 
-      pattern.test(market.question)
-    );
-    
-    if (questionMatch) {
-      return true;
-    }
-    
-    // Check ancillaryData field if present
-    if (market.ancillaryData) {
-      const ancillaryMatch = patterns.some(pattern =>
-        pattern.test(market.ancillaryData!)
+  // 都市名パターンマッピング（extractorと同じロジック）
+  const cityPatterns: Record<ICAOCode, RegExp[]> = {
+    'KLGA': [
+      /\bKLGA\b/i,
+      /\bNYC\b/i,
+      /\bNew York City\b/i,
+      /\bNew York\b/i,
+      /\bLaGuardia\b/i,
+      /\bLGA\b/i,
+      /NYC\s*\(LGA\)/i,
+      /New York City\s*\(LGA\)/i
+    ],
+    'KORD': [
+      /\bKORD\b/i,
+      /\bChicago\b/i,
+      /\bO'Hare\b/i,
+      /\bOHare\b/i,
+      /\bORD\b/i,
+      /Chicago\s*\(ORD\)/i
+    ],
+    'EGLC': [
+      /\bEGLC\b/i,
+      /\bLondon\b/i,
+      /\bLondon City\b/i
+    ]
+  };
+  
+  const filtered = markets.filter(market => {
+    // 各ICAOコードに対して、そのコードまたは都市名パターンをチェック
+    for (const icaoCode of icaoCodes) {
+      const patterns = cityPatterns[icaoCode] || [];
+      
+      // Check question field
+      const questionMatch = patterns.some(pattern => 
+        pattern.test(market.question)
       );
       
-      if (ancillaryMatch) {
+      if (questionMatch) {
         return true;
       }
-    }
-    
-    // Check umadata field if present
-    if (market.umadata) {
-      const umadataMatch = patterns.some(pattern =>
-        pattern.test(market.umadata!)
-      );
       
-      if (umadataMatch) {
-        return true;
+      // Check ancillaryData field if present
+      if (market.ancillaryData) {
+        const ancillaryMatch = patterns.some(pattern =>
+          pattern.test(market.ancillaryData!)
+        );
+        
+        if (ancillaryMatch) {
+          return true;
+        }
       }
-    }
-    
-    // Check description field if present
-    if (market.description) {
-      const descriptionMatch = patterns.some(pattern =>
-        pattern.test(market.description!)
-      );
       
-      if (descriptionMatch) {
-        return true;
+      // Check umadata field if present
+      if (market.umadata) {
+        const umadataMatch = patterns.some(pattern =>
+          pattern.test(market.umadata!)
+        );
+        
+        if (umadataMatch) {
+          return true;
+        }
+      }
+      
+      // Check description field if present
+      if (market.description) {
+        const descriptionMatch = patterns.some(pattern =>
+          pattern.test(market.description!)
+        );
+        
+        if (descriptionMatch) {
+          return true;
+        }
       }
     }
     
     return false;
   });
+  
+  return filtered;
 }
 
 /**

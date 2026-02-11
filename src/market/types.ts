@@ -37,12 +37,14 @@ export type Market = {
  * Polymarket Gamma API.
  * 
  * NOTE: Gamma API uses camelCase for field names, not snake_case
+ * NOTE: New API (/events/pagination) uses clobTokenIds instead of tokens array
  */
 export const GammaMarketResponseSchema = z.object({
   conditionId: z.string(),
   question: z.string(),
   description: z.string().optional(),
   endDateIso: z.string().optional(),
+  endDate: z.string().optional(),
   gameStartTime: z.string().optional(),
   questionId: z.string().optional(),
   marketSlug: z.string().optional(),
@@ -52,12 +54,17 @@ export const GammaMarketResponseSchema = z.object({
   closed: z.boolean(),
   archived: z.boolean().optional(),
   acceptingOrders: z.boolean().optional(),
+  // Old API format: tokens array
   tokens: z.array(z.object({
     tokenId: z.string(),
     outcome: z.string(),
     price: z.string().optional(),
     winner: z.boolean().optional(),
   })).optional().default([]),
+  // New API format: clobTokenIds string (JSON array)
+  clobTokenIds: z.string().optional(),
+  // outcomes string (JSON array like '["Yes", "No"]')
+  outcomes: z.string().optional(),
   rewards: z.object({
     minSize: z.string().optional(),
     maxSpread: z.string().optional(),
