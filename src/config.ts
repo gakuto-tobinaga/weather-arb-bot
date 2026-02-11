@@ -182,6 +182,12 @@ export const ConfigSchema = z.object({
   MONITORING_MODE: z.string()
     .default('true')
     .transform((val) => val.toLowerCase() === 'true'),
+
+  /**
+   * Slack webhook URL for notifications
+   * Optional field for sending trading signals and alerts to Slack
+   */
+  SLACK_WEBHOOK_URL: z.string().optional(),
 });
 
 /**
@@ -228,6 +234,7 @@ export function loadConfig(): Config {
     BUDGET: process.env.BUDGET,
     POLL_INTERVAL: process.env.POLL_INTERVAL,
     MONITORING_MODE: process.env.MONITORING_MODE,
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
   });
 
   if (!result.success) {

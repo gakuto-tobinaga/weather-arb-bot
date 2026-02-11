@@ -10,6 +10,7 @@
 import { loadConfig } from './config';
 import type { Config } from './config';
 import { initLogger, logSystemInitialization } from './logger';
+import { initSlackNotifier, getSlackNotifier } from './notifications/slack-notifier';
 import { OrderExecutor } from './order/client';
 import { RiskManager } from './risk/manager';
 import { SignalGenerator } from './signal/generator';
@@ -48,6 +49,15 @@ class MainController {
       this.config.BUDGET,
       this.config.MIN_EV
     );
+
+    // Initialize Slack notifier
+    initSlackNotifier(this.config.SLACK_WEBHOOK_URL);
+    const slackNotifier = getSlackNotifier();
+    if (slackNotifier.isEnabled()) {
+      console.log('✓ Slack notifications enabled');
+    } else {
+      console.log('ℹ️  Slack notifications disabled (no webhook URL configured)');
+    }
 
     // Initialize components
     this.orderExecutor = new OrderExecutor(this.config);
@@ -205,6 +215,19 @@ class MainController {
         );
 
         console.log(`  Signal: ${signal.action} ${market.icaoCode} @ ${signal.recommendedPrice.toFixed(4)} (EV: ${signal.ev.toFixed(4)})`);
+
+        // Send Slack notification for high-EV signals
+        const slackNotifier = getSlackNotifier();
+        if (slackNotifier.isEnabled() && signal.ev >= 0.1) {
+          const { formatSignalNotification } = await import('./notifications/formatters');
+          const notification = formatSignalNotification({
+            signal,
+            market,
+            currentTemp,
+            threshold: market.threshold,
+          });
+          await slackNotifier.sendNotification(notification);
+        }
 
         // Track prediction in monitoring mode
         // Requirement 12.2: Log all trading signals with predictions
