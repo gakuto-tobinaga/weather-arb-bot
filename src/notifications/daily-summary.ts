@@ -137,7 +137,7 @@ export function filterTradesForDate(trades: Trade[], date: string): Trade[] {
  */
 export function getTodayDateString(): string {
   const now = new Date();
-  return now.toISOString().split('T')[0];
+  return now.toISOString().split('T')[0] ?? '';
 }
 
 /**

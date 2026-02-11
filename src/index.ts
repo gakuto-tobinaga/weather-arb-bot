@@ -284,7 +284,7 @@ class MainController {
 
       // Log daily summary once per day
       // Requirement 12.3: Log daily Brier score summary
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = new Date().toISOString().split('T')[0] ?? '';
       if (this.lastDailySummaryDate !== currentDate) {
         this.logDailyBrierScoreSummary();
         this.lastDailySummaryDate = currentDate;
