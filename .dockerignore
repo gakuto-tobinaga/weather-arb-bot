@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Test files
+tests/
+*.test.ts
+*.spec.ts
+test-logs/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Kiro specs
+.kiro/
+
+# Resources
+.resources/
+
+# Cursor
+.cursor/

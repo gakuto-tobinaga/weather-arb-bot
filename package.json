@@ -1,0 +1,31 @@
+{
+  "name": "weather-arb-bot",
+  "version": "0.1.0",
+  "description": "Automated arbitrage trading system for Polymarket weather prediction markets",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^25.2.3",
+    "fast-check": "^4.5.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@polymarket/clob-client": "^5.2.1",
+    "@stdlib/stats-base-dists-normal-cdf": "^0.3.1",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "ethers": "^6.16.0",
+    "zod": "^4.3.6"
+  }
+}

@@ -1,0 +1,71 @@
+# Weather-Arb-Bot Docker Compose Configuration
+# 
+# Usage:
+#   docker-compose up -d          # Start in background
+#   docker-compose logs -f        # View logs
+#   docker-compose down           # Stop and remove containers
+#   docker-compose restart        # Restart the bot
+
+version: '3.8'
+
+services:
+  weather-arb-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    container_name: weather-arb-bot
+    
+    # Environment variables from .env file
+    env_file:
+      - .env
+    
+    # Volume mounts for persistent data
+    volumes:
+      # Persist logs across container restarts
+      - ./logs:/app/logs
+      
+      # Optional: Mount .env file directly (alternative to env_file)
+      # - ./.env:/app/.env:ro
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Health check (optional)
+    # healthcheck:
+    #   test: ["CMD", "bun", "run", "healthcheck.ts"]
+    #   interval: 30s
+    #   timeout: 3s
+    #   retries: 3
+    #   start_period: 10s
+    
+    # Network configuration (optional)
+    # networks:
+    #   - bot-network
+
+# Optional: Define custom network
+# networks:
+#   bot-network:
+#     driver: bridge
+
+# Optional: Define named volumes
+# volumes:
+#   logs:
+#     driver: local
